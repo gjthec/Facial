@@ -67,7 +67,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/presence" replace />} />
+      <Route path="/" element={<Navigate to="/admin/faces" replace />} />
     </Routes>
   );
 };
