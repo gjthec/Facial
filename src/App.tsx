@@ -4,7 +4,13 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import AdminFacesPage from './pages/AdminFacesPage';
+import PresencePage from './pages/PresencePage';
+import FaceEnrollmentPage from './pages/FaceEnrollmentPage';
 import { Loader2 } from 'lucide-react';
+import { GoogleUser } from './types';
+
+const ADMIN_EMAILS = ['admin@dominio.com'];
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -24,6 +30,13 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  if (!isAdmin(user)) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -37,7 +50,35 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/presence"
+        element={
+          <ProtectedRoute>
+            <PresencePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/faces"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <AdminFacesPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/faces/new"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <FaceEnrollmentPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/admin/faces" replace />} />
     </Routes>
   );
 };
