@@ -1,0 +1,8 @@
+{
+  "name": "MicrosoftAttendanceApp",
+  "description": "Classroom attendance system using Microsoft Entra ID for trusted authentication and geolocation.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ]
+}
