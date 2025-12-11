@@ -7,33 +7,45 @@ let loaded = false;
 let matcher: FaceMatcher | null = null;
 let loadingPromise: Promise<void> | null = null;
 
-function getModelBaseUrl() {
-  // Configure the model path via Vite env when serving assets from a CDN or non-root path
+function getModelBaseUrls(): string[] {
+  // 1) explicit env override
   const envUrl = (import.meta as any)?.env?.VITE_FACEAPI_MODEL_URL as string | undefined;
+  // 2) local public/models (Vite copies public/* to root)
   const baseUrl = (import.meta as any)?.env?.BASE_URL || '/';
-  return envUrl || `${baseUrl}models`;
+  // 3) CDN fallback to avoid HTML/JSON parse errors when local assets are missing
+  const cdn = 'https://justadudewhohacks.github.io/face-api.js/models';
+  return [envUrl, `${baseUrl}models`, cdn].filter(Boolean) as string[];
 }
 
 async function loadModels() {
   if (loaded) return;
-  if (!loadingPromise) {
-    const MODEL_URL = getModelBaseUrl();
-    loadingPromise = Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    ])
-      .then(() => {
+  if (loadingPromise) return loadingPromise;
+
+  const tried: string[] = [];
+  const modelUrls = getModelBaseUrls();
+
+  loadingPromise = (async () => {
+    for (const MODEL_URL of modelUrls) {
+      tried.push(MODEL_URL);
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
         loaded = true;
-      })
-      .catch((err) => {
-        // Face-api returns HTML when the model files are missing, which causes JSON parse errors; explain where to place models
-        loadingPromise = null;
-        throw new Error(
-          `Falha ao carregar modelos de face em "${MODEL_URL}". Garanta que os arquivos .bin e .json estejam em public/models ou configure VITE_FACEAPI_MODEL_URL.`
-        );
-      });
-  }
+        return;
+      } catch (err) {
+        // Continue trying other sources; SyntaxError happens when HTML (index.html) is returned instead of JSON/weights
+        console.warn(`Falha ao carregar modelos de ${MODEL_URL}:`, err);
+      }
+    }
+    loadingPromise = null;
+    throw new Error(
+      `Não foi possível carregar os modelos de face. Verifique se public/models contém os arquivos necessários ou defina VITE_FACEAPI_MODEL_URL. Tentado: ${tried.join(', ')}`
+    );
+  })();
+
   await loadingPromise;
 }
 
