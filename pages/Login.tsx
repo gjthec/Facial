@@ -8,7 +8,7 @@ const Login: React.FC = () => {
   const { loginWithGoogle, isAuthenticated, isLoading } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/presence" replace />;
   }
 
   return (
