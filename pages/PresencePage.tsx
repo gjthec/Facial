@@ -58,25 +58,12 @@ const PresencePage: React.FC = () => {
       await image.decode();
       const result = await recognizeUserByFace(image);
 
-      if (!result.recognized) {
-        setError('Sua face ainda não foi cadastrada. Procure o administrador.');
-        setStatus('');
-        await registerPresence({
-          userId: user?.sub || 'unknown',
-          displayName: user?.displayName || 'Desconhecido',
-          email: user?.email || 'sem-email',
-          status: 'denied',
-          timestamp: new Date(),
-          matcherDistance: undefined,
-        });
-        return;
-      }
-
-      if (result.userId !== user?.sub) {
-        setError('A face não pertence ao usuário logado.');
-        setStatus('Possível tentativa indevida.');
-        return;
-      }
+      const recognizedSameUser = result.recognized && result.userId === user?.sub;
+      const recognitionNote = !result.recognized
+        ? 'Face não encontrada na base. Presença registrada sem validação facial.'
+        : result.userId !== user?.sub
+        ? 'Face reconhecida pertence a outro usuário. Presença registrada sem validação facial.'
+        : 'Face reconhecida para este usuário.';
 
       const record: PresenceRecord = {
         userId: user!.sub,
@@ -85,15 +72,33 @@ const PresencePage: React.FC = () => {
         status: 'present',
         timestamp: new Date(),
         matcherDistance: result.distance,
+        recognized: recognizedSameUser,
+        recognizedUserId: result.recognized ? result.userId : undefined,
+        recognitionNote,
       };
 
       await registerPresence(record);
       setSuccess(record);
-      setStatus('Presença registrada com sucesso.');
+      setError(null);
+      setStatus(
+        recognizedSameUser
+          ? 'Presença registrada com sucesso. Face confirmada para o usuário logado.'
+          : 'Presença registrada sem validação facial. Confira a base de faces depois de cadastrá-las.'
+      );
     } catch (e) {
       console.error(e);
-      setError('Erro ao reconhecer rosto.');
-      setStatus('');
+      setError(null);
+      const fallbackRecord: PresenceRecord = {
+        userId: user!.sub,
+        displayName: user!.displayName,
+        email: user!.email,
+        status: 'present',
+        timestamp: new Date(),
+        recognitionNote: 'Erro ao reconhecer rosto. Presença registrada sem validação facial.',
+      };
+      await registerPresence(fallbackRecord);
+      setSuccess(fallbackRecord);
+      setStatus('Presença registrada. O reconhecimento facial falhou, valide manualmente depois de cadastrar as faces.');
     } finally {
       setLoading(false);
     }

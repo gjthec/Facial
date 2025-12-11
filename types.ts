@@ -63,4 +63,7 @@ export interface PresenceRecord {
   timestamp: Date;
   status: 'present' | 'denied';
   matcherDistance?: number;
+  recognized?: boolean;
+  recognizedUserId?: string;
+  recognitionNote?: string;
 }
