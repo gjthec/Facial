@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { CameraCapture } from '../components/CameraCapture';
-import { recognizeUserByFace, loadFaceMatcher } from '../services/faceRecognitionService';
-import { db } from '../services/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { PresenceRecord, GoogleUser } from '../types';
+import React, { useMemo, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { CameraCapture } from "../components/CameraCapture";
+// 👇 por enquanto, sem reconhecimento facial
+// import { recognizeUserByFace, loadFaceMatcher } from '../services/faceRecognitionService';
+import { db } from "../services/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { PresenceRecord, GoogleUser } from "../types";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,96 +14,109 @@ import {
   ScanFace,
   Users,
   UserPlus,
-} from 'lucide-react';
-import Sidebar from '../components/Sidebar';
+} from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
 const PresencePage: React.FC = () => {
   const { user, logout } = useAuth();
-  const [status, setStatus] = useState<string>('Capture sua face para registrar presença.');
+  const [status, setStatus] = useState<string>(
+    "Capture sua face para registrar presença."
+  );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<PresenceRecord | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const ADMIN_EMAILS = ['admin@dominio.com'];
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  const ADMIN_EMAILS = ["admin@dominio.com"];
+  const isAdmin = (u?: GoogleUser | null) =>
+    !!u && (ADMIN_EMAILS.includes(u.email) || u.role === "teacher");
 
   const navItems = useMemo(
-    () =>
-      [
-        { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
-        ...(isAdmin(user)
-          ? [
-              { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
-              { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
-            ]
-          : []),
-      ],
+    () => [
+      {
+        label: "Dashboard",
+        to: "/dashboard",
+        icon: <LayoutDashboard className="w-4 h-4" />,
+      },
+      {
+        label: "Registrar Presença",
+        to: "/presence",
+        icon: <ScanFace className="w-4 h-4" />,
+      },
+      ...(isAdmin(user)
+        ? [
+            {
+              label: "Faces Autorizadas",
+              to: "/admin/faces",
+              icon: <Users className="w-4 h-4" />,
+            },
+            {
+              label: "Novo Cadastro",
+              to: "/admin/faces/new",
+              icon: <UserPlus className="w-4 h-4" />,
+            },
+          ]
+        : []),
+    ],
     [user]
   );
 
-  useEffect(() => {
-    loadFaceMatcher().catch(() => setError('Não foi possível carregar base de faces.'));
-  }, []);
-
+  // 🔧 Modo teste: só grava no Firestore
   const registerPresence = async (record: PresenceRecord) => {
-    await addDoc(collection(db, 'presences'), {
+    await addDoc(collection(db, "presences"), {
       ...record,
       timestamp: serverTimestamp(),
     });
   };
 
   const handleCapture = async (blob: Blob) => {
+    if (!user) return;
+
     setLoading(true);
     setError(null);
-    setStatus('Reconhecendo rosto...');
-    try {
-      const image = document.createElement('img');
-      image.src = URL.createObjectURL(blob);
-      await image.decode();
-      const result = await recognizeUserByFace(image);
+    setStatus("Registrando presença...");
 
-      const recognizedSameUser = result.recognized && result.userId === user?.sub;
-      const recognitionNote = !result.recognized
-        ? 'Face não encontrada na base. Presença registrada sem validação facial.'
-        : result.userId !== user?.sub
-        ? 'Face reconhecida pertence a outro usuário. Presença registrada sem validação facial.'
-        : 'Face reconhecida para este usuário.';
+    try {
+      // Se quiser fazer algo com a imagem, dá pra usar o blob aqui
+      const recognitionNote =
+        "Reconhecimento facial desativado em modo de teste. Presença registrada sem validação facial.";
 
       const record: PresenceRecord = {
-        userId: user!.sub,
-        displayName: user!.displayName,
-        email: user!.email,
-        status: 'present',
+        userId: user.sub,
+        displayName: user.displayName,
+        email: user.email,
+        status: "present",
         timestamp: new Date(),
-        matcherDistance: result.distance,
-        recognized: recognizedSameUser,
-        recognizedUserId: result.recognized ? result.userId : undefined,
+        recognized: false,
         recognitionNote,
       };
 
       await registerPresence(record);
       setSuccess(record);
-      setError(null);
-      setStatus(
-        recognizedSameUser
-          ? 'Presença registrada com sucesso. Face confirmada para o usuário logado.'
-          : 'Presença registrada sem validação facial. Confira a base de faces depois de cadastrá-las.'
-      );
+      setStatus("Presença registrada (modo teste, sem validação facial).");
     } catch (e) {
       console.error(e);
-      setError(null);
       const fallbackRecord: PresenceRecord = {
-        userId: user!.sub,
-        displayName: user!.displayName,
-        email: user!.email,
-        status: 'present',
+        userId: user.sub,
+        displayName: user.displayName,
+        email: user.email,
+        status: "present",
         timestamp: new Date(),
-        recognitionNote: 'Erro ao reconhecer rosto. Presença registrada sem validação facial.',
+        recognitionNote:
+          "Erro inesperado ao registrar presença em modo teste. Verifique o Firestore.",
       };
-      await registerPresence(fallbackRecord);
-      setSuccess(fallbackRecord);
-      setStatus('Presença registrada. O reconhecimento facial falhou, valide manualmente depois de cadastrar as faces.');
+      try {
+        await registerPresence(fallbackRecord);
+        setSuccess(fallbackRecord);
+        setStatus(
+          "Presença registrada, mas ocorreu um erro durante o processo."
+        );
+      } catch (inner) {
+        console.error(inner);
+        setError(
+          "Não foi possível registrar presença. Verifique o Firestore e a conexão."
+        );
+        setStatus("Falha ao registrar presença.");
+      }
     } finally {
       setLoading(false);
     }
@@ -124,12 +138,14 @@ const PresencePage: React.FC = () => {
       <main className="flex-1 max-w-3xl mx-auto p-8 space-y-4">
         <div className="bg-white shadow rounded-lg p-4">
           <h1 className="text-xl font-bold mb-2">Registrar Presença</h1>
-          <p className="text-sm text-gray-500">Autentique-se com sua face cadastrada.</p>
+          <p className="text-sm text-gray-500">
+            Capture sua imagem para registrar presença.
+          </p>
         </div>
 
         <CameraCapture
           onCapture={handleCapture}
-          onCancel={() => setStatus('Captura cancelada.')}
+          onCancel={() => setStatus("Captura cancelada.")}
           isLoading={loading}
           error={error}
           onClearError={() => setError(null)}
@@ -141,8 +157,17 @@ const PresencePage: React.FC = () => {
           <div className="p-4 bg-green-50 border border-green-100 rounded-md flex items-start gap-2">
             <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
             <div>
-              <p className="font-semibold text-green-800">Presença registrada</p>
-              <p className="text-sm text-green-700">{success.displayName} - {success.email}</p>
+              <p className="font-semibold text-green-800">
+                Presença registrada
+              </p>
+              <p className="text-sm text-green-700">
+                {success.displayName} - {success.email}
+              </p>
+              {success.recognitionNote && (
+                <p className="text-xs text-green-700 mt-1">
+                  {success.recognitionNote}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -153,7 +178,8 @@ const PresencePage: React.FC = () => {
             <div>
               <p className="font-semibold text-red-800">{error}</p>
               <p className="text-sm text-red-700">
-                Certifique-se de que o administrador cadastrou sua face na coleção `faces` e que ela está ativa.
+                Verifique a conexão com o Firestore e se as regras permitem
+                leitura/escrita em `presences`.
               </p>
             </div>
           </div>
