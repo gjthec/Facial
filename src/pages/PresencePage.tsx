@@ -123,7 +123,7 @@ const PresencePage: React.FC = () => {
       );
     } catch (e) {
       console.error(e);
-      setError(null);
+      setError(e instanceof Error ? e.message : 'Falha ao processar reconhecimento facial.');
       const fallbackRecord: PresenceRecord = {
         userId: user!.sub,
         displayName: user!.displayName,

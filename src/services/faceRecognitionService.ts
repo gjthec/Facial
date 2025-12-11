@@ -5,17 +5,36 @@ import { FaceDocument } from '../types';
 
 let loaded = false;
 let matcher: FaceMatcher | null = null;
+let loadingPromise: Promise<void> | null = null;
+
+function getModelBaseUrl() {
+  // Configure the model path via Vite env when serving assets from a CDN or non-root path
+  const envUrl = (import.meta as any)?.env?.VITE_FACEAPI_MODEL_URL as string | undefined;
+  const baseUrl = (import.meta as any)?.env?.BASE_URL || '/';
+  return envUrl || `${baseUrl}models`;
+}
 
 async function loadModels() {
   if (loaded) return;
-  // Ajuste o caminho dos modelos conforme o host (ex.: /models)
-  const MODEL_URL = '/models';
-  await Promise.all([
-    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-  ]);
-  loaded = true;
+  if (!loadingPromise) {
+    const MODEL_URL = getModelBaseUrl();
+    loadingPromise = Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ])
+      .then(() => {
+        loaded = true;
+      })
+      .catch((err) => {
+        // Face-api returns HTML when the model files are missing, which causes JSON parse errors; explain where to place models
+        loadingPromise = null;
+        throw new Error(
+          `Falha ao carregar modelos de face em "${MODEL_URL}". Garanta que os arquivos .bin e .json estejam em public/models ou configure VITE_FACEAPI_MODEL_URL.`
+        );
+      });
+  }
+  await loadingPromise;
 }
 
 function toLabeledDescriptor(face: FaceDocument) {
