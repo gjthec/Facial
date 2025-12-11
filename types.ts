@@ -43,3 +43,24 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface FaceDocument {
+  id?: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  active: boolean;
+  embeddings: number[][];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface PresenceRecord {
+  id?: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  timestamp: Date;
+  status: 'present' | 'denied';
+  matcherDistance?: number;
+}
