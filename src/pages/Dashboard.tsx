@@ -1,10 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import { ClassSession, AttendanceRecord } from '../types';
 import { Button } from '../components/Button';
-import { LogOut, MapPin, Clock, Calendar, ShieldCheck, Camera, AlertTriangle } from 'lucide-react';
+import {
+  MapPin,
+  Clock,
+  Calendar,
+  ShieldCheck,
+  Camera,
+  AlertTriangle,
+  LayoutDashboard,
+  ScanFace,
+  Users,
+  UserPlus,
+} from 'lucide-react';
 import { CameraCapture } from '../components/CameraCapture';
+import Sidebar from '../components/Sidebar';
+import { GoogleUser } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -17,6 +30,24 @@ const Dashboard: React.FC = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
+  const ADMIN_EMAILS = ['admin@dominio.com'];
+  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+
+  const navItems = useMemo(
+    () =>
+      [
+        { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
+        ...(isAdmin(user)
+          ? [
+              { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
+              { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
+            ]
+          : []),
+      ],
+    [user]
+  );
 
   useEffect(() => {
     loadClasses();
@@ -113,10 +144,13 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa]">
+    <div className="min-h-screen bg-gray-50 flex">
+      {user && <Sidebar user={user} navItems={navItems} onLogout={logout} />}
+
+      <div className="flex-1">
       {showCamera && (
-        <CameraCapture 
-          onCapture={handleFaceCapture} 
+        <CameraCapture
+          onCapture={handleFaceCapture}
           onCancel={() => setShowCamera(false)}
           isLoading={loading}
           error={cameraError}
@@ -124,30 +158,8 @@ const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* Header Corporativo */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            {user?.photoUrl ? (
-              <img src={user.photoUrl} alt="Avatar" className="w-8 h-8 rounded-full" />
-            ) : (
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                {user?.displayName?.charAt(0)}
-              </div>
-            )}
-            <div>
-              <h1 className="text-sm font-bold text-gray-900 leading-tight">{user?.displayName}</h1>
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Conta Google</p>
-            </div>
-          </div>
-          <button onClick={logout} className="text-gray-500 hover:text-gray-900">
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
+      <main className="max-w-5xl mx-auto p-8 space-y-6">
 
-      <main className="max-w-md mx-auto p-4 space-y-6">
-        
         {/* Status Message */}
         {statusMessage && !showCamera && (
           <div className={`p-4 rounded-lg flex items-start gap-3 text-sm ${
@@ -196,7 +208,7 @@ const Dashboard: React.FC = () => {
             <Calendar className="w-5 h-5 text-gray-400" />
             Aulas de Hoje
           </h2>
-          
+
           <div className="space-y-3">
             {classes.map((cls) => (
               <div key={cls.id} className={`relative bg-white rounded-xl border transition-all ${
@@ -250,6 +262,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 };
