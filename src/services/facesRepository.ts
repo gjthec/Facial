@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
   query,
   serverTimestamp,
   setDoc,
@@ -25,6 +26,13 @@ export async function listActiveFaces(): Promise<FaceDocument[]> {
   const q = query(collection(db, COLLECTION_NAME), where('active', '==', true));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as FaceDocument) }));
+}
+
+export async function getFace(userId: string): Promise<FaceDocument | null> {
+  const faceRef = doc(collection(db, COLLECTION_NAME), userId);
+  const snap = await getDoc(faceRef);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...(snap.data() as FaceDocument) };
 }
 
 export async function upsertFace(face: FaceDocument): Promise<void> {

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   ScanFace,
   Users,
+  UserPlus,
 } from 'lucide-react';
 import { CameraCapture } from '../components/CameraCapture';
 import Sidebar from '../components/Sidebar';
@@ -39,7 +40,10 @@ const Dashboard: React.FC = () => {
         { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
         ...(isAdmin(user)
-          ? [{ label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> }]
+          ? [
+              { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
+              { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
+            ]
           : []),
       ],
     [user]

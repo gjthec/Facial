@@ -11,12 +11,13 @@ import { createEmbeddingFromBlob } from '../services/faceRecognitionService';
 import { FaceDocument } from '../types';
 import { CameraCapture } from '../components/CameraCapture';
 import { Button } from '../components/Button';
-import { CheckCircle2, Loader2, Shield, Trash2, Upload } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import { CheckCircle2, LayoutDashboard, Loader2, ScanFace, Shield, Trash2, Upload, Users, UserPlus } from 'lucide-react';
 
 const ADMIN_EMAILS = ['admin@dominio.com'];
 
 const AdminFacesPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [faces, setFaces] = useState<FaceDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
@@ -25,6 +26,21 @@ const AdminFacesPage: React.FC = () => {
   const isAdmin = useMemo(
     () => !!user && (ADMIN_EMAILS.includes(user.email) || user.role === 'teacher'),
     [user]
+  );
+
+  const navItems = useMemo(
+    () =>
+      [
+        { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
+        ...(isAdmin
+          ? [
+              { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
+              { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
+            ]
+          : []),
+      ],
+    [isAdmin]
   );
 
   useEffect(() => {
@@ -98,7 +114,10 @@ const AdminFacesPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 flex">
+      {user && <Sidebar user={user} navItems={navItems} onLogout={logout} />}
+
+      <div className="flex-1 max-w-5xl mx-auto p-6 space-y-6">
       {showCapture && (
         <CameraCapture
           onCapture={handleCapture}
@@ -175,6 +194,7 @@ const AdminFacesPage: React.FC = () => {
           Garanta que os modelos do <code>face-api.js</code> estejam disponíveis no caminho configurado
           (ex.: <code>/public/models</code>). O Firestore precisa estar inicializado em <code>services/firebase.ts</code>.
         </p>
+      </div>
       </div>
     </div>
   );

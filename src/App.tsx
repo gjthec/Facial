@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminFacesPage from './pages/AdminFacesPage';
 import PresencePage from './pages/PresencePage';
+import FaceEnrollmentPage from './pages/FaceEnrollmentPage';
 import { Loader2 } from 'lucide-react';
 import { GoogleUser } from './types';
 
@@ -63,6 +64,16 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AdminRoute>
               <AdminFacesPage />
+            </AdminRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/faces/new"
+        element={
+          <ProtectedRoute>
+            <AdminRoute>
+              <FaceEnrollmentPage />
             </AdminRoute>
           </ProtectedRoute>
         }
