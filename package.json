@@ -9,11 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^11.4.0",
     "lucide-react": "^0.556.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.10.1",
-    "@google/genai": "^1.31.0"
+    "@google/genai": "^1.31.0",
+    "face-api.js": "^0.22.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
