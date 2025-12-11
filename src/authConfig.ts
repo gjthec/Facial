@@ -12,7 +12,7 @@ export const GOOGLE_CLIENT = {
   clientId:
     "455563875480-hba2lg34ahn8a62uchcaa7llqhtnkqn6.apps.googleusercontent.com",
   scope: "profile email openid",
-  redirectUri: "https://facial-project-umber.vercel.app",
+  redirectUri: "http://localhost:3000",
 };
 export const GOOGLE_CLIENT_ID =
   "455563875480-hba2lg34ahn8a62uchcaa7llqhtnkqn6.apps.googleusercontent.com";
