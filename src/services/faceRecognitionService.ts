@@ -24,9 +24,29 @@ async function loadModels() {
   const tried: string[] = [];
   const modelUrls = getModelBaseUrls();
 
+  async function canUseModelSource(baseUrl: string) {
+    const normalized = baseUrl.replace(/\/$/, '');
+    const manifestUrl = `${normalized}/ssd_mobilenetv1_model-weights_manifest.json`;
+
+    try {
+      const res = await fetch(manifestUrl, { method: 'GET' });
+      if (!res.ok) return false;
+      const contentType = res.headers.get('content-type');
+      return contentType?.includes('application/json') ?? false;
+    } catch (err) {
+      console.warn(`Erro ao verificar modelos em ${baseUrl}:`, err);
+      return false;
+    }
+  }
+
   loadingPromise = (async () => {
     for (const MODEL_URL of modelUrls) {
       tried.push(MODEL_URL);
+      const isValid = await canUseModelSource(MODEL_URL);
+      if (!isValid) {
+        console.warn(`Manifesto de modelos não encontrado ou inválido em ${MODEL_URL}.`);
+        continue;
+      }
       try {
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
