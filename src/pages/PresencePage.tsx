@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   ScanFace,
   Users,
+  ImagePlus,
   UserPlus,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
@@ -39,6 +40,7 @@ const PresencePage: React.FC = () => {
         ...(isAdmin(user)
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
+              { label: 'Cadastro de Imagem', to: '/admin/faces/profile', icon: <ImagePlus className="w-4 h-4" /> },
               { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
             ]
           : []),
@@ -76,13 +78,14 @@ const PresencePage: React.FC = () => {
       }
 
       const existingFace = await getFace(user!.sub);
+      const embeddingKey = Date.now().toString();
       if (!existingFace) {
         await upsertFace({
           userId: user!.sub,
           displayName: user!.displayName,
           email: user!.email,
           active: true,
-          embeddings: [embedding],
+          embeddings: { [embeddingKey]: embedding },
         });
       } else {
         await addEmbedding(user!.sub, embedding);

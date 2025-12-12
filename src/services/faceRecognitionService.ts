@@ -70,7 +70,10 @@ async function loadModels() {
 }
 
 function toLabeledDescriptor(face: FaceDocument) {
-  const descriptors = face.embeddings.map((emb) => new Float32Array(emb));
+  const embeddings = Array.isArray(face.embeddings)
+    ? face.embeddings
+    : Object.values(face.embeddings || {});
+  const descriptors = embeddings.map((emb) => new Float32Array(emb));
   return new LabeledFaceDescriptors(face.userId, descriptors);
 }
 
