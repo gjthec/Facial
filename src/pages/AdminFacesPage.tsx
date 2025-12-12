@@ -36,6 +36,7 @@ const AdminFacesPage: React.FC = () => {
         ...(isAdmin
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
+              { label: 'Cadastro de Imagem', to: '/admin/faces/profile', icon: <UserPlus className="w-4 h-4" /> },
               { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
             ]
           : []),

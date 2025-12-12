@@ -51,6 +51,7 @@ export interface FaceDocument {
   email: string;
   active: boolean;
   embeddings: Record<string, number[]>;
+  photoData?: string;
   createdAt?: any;
   updatedAt?: any;
 }
