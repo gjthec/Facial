@@ -76,13 +76,14 @@ const PresencePage: React.FC = () => {
       }
 
       const existingFace = await getFace(user!.sub);
+      const embeddingKey = Date.now().toString();
       if (!existingFace) {
         await upsertFace({
           userId: user!.sub,
           displayName: user!.displayName,
           email: user!.email,
           active: true,
-          embeddings: [embedding],
+          embeddings: { [embeddingKey]: embedding },
         });
       } else {
         await addEmbedding(user!.sub, embedding);

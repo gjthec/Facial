@@ -1,17 +1,4 @@
-import {
-  addDoc,
-  arrayUnion,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  getDoc,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, getDoc, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from './firebase';
 import { FaceDocument } from '../types';
 
@@ -37,10 +24,17 @@ export async function getFace(userId: string): Promise<FaceDocument | null> {
 
 export async function upsertFace(face: FaceDocument): Promise<void> {
   const faceRef = doc(collection(db, COLLECTION_NAME), face.userId);
+  const normalizedEmbeddings = Array.isArray(face.embeddings)
+    ? face.embeddings.reduce<Record<string, number[]>>((acc, emb, idx) => {
+        acc[idx.toString()] = emb;
+        return acc;
+      }, {})
+    : face.embeddings || {};
   await setDoc(
     faceRef,
     {
       ...face,
+      embeddings: normalizedEmbeddings,
       updatedAt: serverTimestamp(),
       createdAt: face.createdAt || serverTimestamp(),
     },
@@ -50,10 +44,21 @@ export async function upsertFace(face: FaceDocument): Promise<void> {
 
 export async function addEmbedding(userId: string, embedding: number[]): Promise<void> {
   const faceRef = doc(collection(db, COLLECTION_NAME), userId);
+  const snap = await getDoc(faceRef);
+  const existing = (snap.data() as FaceDocument | undefined)?.embeddings;
+
+  const normalized = Array.isArray(existing)
+    ? existing.reduce<Record<string, number[]>>((acc, emb, idx) => {
+        acc[idx.toString()] = emb;
+        return acc;
+      }, {})
+    : existing || {};
+
+  const embeddingKey = Date.now().toString();
   await setDoc(
     faceRef,
     {
-      embeddings: arrayUnion(embedding),
+      embeddings: { ...normalized, [embeddingKey]: embedding },
       updatedAt: serverTimestamp(),
     },
     { merge: true }

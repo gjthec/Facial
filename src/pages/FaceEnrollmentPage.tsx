@@ -57,19 +57,20 @@ const FaceEnrollmentPage: React.FC = () => {
         return;
       }
 
+      const embeddingKey = Date.now().toString();
       const faceDoc: FaceDocument = {
         userId: user.sub,
         displayName: user.displayName,
         email: user.email,
         active: true,
-        embeddings: [embedding],
+        embeddings: { [embeddingKey]: embedding },
       };
 
       setStatus('Salvando no Firestore...');
       const existing = await getFace(user.sub);
 
       if (!existing) {
-        await upsertFace({ ...faceDoc, embeddings: [embedding] });
+        await upsertFace({ ...faceDoc, embeddings: { [embeddingKey]: embedding } });
       } else {
         await upsertFace({ ...existing, displayName: user.displayName, email: user.email, active: true });
         await addEmbedding(user.sub, embedding);

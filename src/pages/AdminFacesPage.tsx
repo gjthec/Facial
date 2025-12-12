@@ -78,12 +78,13 @@ const AdminFacesPage: React.FC = () => {
     }
 
     setStatus('Salvando no Firestore...');
+    const embeddingKey = Date.now().toString();
     const base: FaceDocument = {
       userId: user.sub,
       displayName: user.displayName,
       email: user.email,
       active: true,
-      embeddings: [embedding],
+      embeddings: { [embeddingKey]: embedding },
     };
 
     const existing = faces.find((f) => f.userId === user.sub);
@@ -173,7 +174,11 @@ const AdminFacesPage: React.FC = () => {
                     {face.active ? 'Ativo' : 'Inativo'}
                   </span>
                 </td>
-                <td className="p-3">{face.embeddings?.length || 0}</td>
+                <td className="p-3">
+                  {Array.isArray(face.embeddings)
+                    ? face.embeddings.length
+                    : Object.keys(face.embeddings || {}).length}
+                </td>
                 <td className="p-3 flex gap-2">
                   <Button variant="outline" onClick={() => handleToggle(face)}>
                     {face.active ? 'Desativar' : 'Ativar'}
