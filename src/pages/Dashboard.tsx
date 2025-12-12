@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { CameraCapture } from '../components/CameraCapture';
 import Sidebar from '../components/Sidebar';
-import { GoogleUser } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -32,15 +31,14 @@ const Dashboard: React.FC = () => {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  const ADMIN_EMAILS = ['admin@dominio.com'];
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  const isAdmin = useMemo(() => !!user, [user]);
 
   const navItems = useMemo(
     () =>
       [
         { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
-        ...(isAdmin(user)
+        ...(isAdmin
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
               { label: 'Cadastro de Imagem', to: '/admin/faces/profile', icon: <ImagePlus className="w-4 h-4" /> },
@@ -48,7 +46,7 @@ const Dashboard: React.FC = () => {
             ]
           : []),
       ],
-    [user]
+    [isAdmin]
   );
 
   useEffect(() => {

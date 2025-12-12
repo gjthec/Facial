@@ -47,10 +47,15 @@ export interface AuthState {
 export interface FaceDocument {
   id?: string;
   userId: string;
+  personId?: string;
   displayName: string;
   email: string;
   active: boolean;
   embeddings: Record<string, number[]>;
+  embeddingAvg?: number[];
+  embeddingVersion?: string;
+  samples?: number[][];
+  imageUrls?: string[];
   photoData?: string;
   createdAt?: any;
   updatedAt?: any;

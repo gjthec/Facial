@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar';
 import { Button } from '../components/Button';
 import { CameraCapture } from '../components/CameraCapture';
 import { useAuth } from '../contexts/AuthContext';
-import { GoogleUser, FaceDocument } from '../types';
+import { FaceDocument } from '../types';
 import {
   listFaces,
   getFace,
@@ -22,8 +22,6 @@ import {
   Users,
   UserPlus,
 } from 'lucide-react';
-
-const ADMIN_EMAILS = ['admin@dominio.com'];
 
 const defaultForm = {
   userId: '',
@@ -57,14 +55,14 @@ const FaceProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
 
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  const isAdmin = useMemo(() => !!user, [user]);
 
   const navItems = useMemo(
     () =>
       [
         { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
-        ...(isAdmin(user)
+        ...(isAdmin
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
               { label: 'Novo Cadastro', to: '/admin/faces/new', icon: <UserPlus className="w-4 h-4" /> },
@@ -72,20 +70,20 @@ const FaceProfilePage: React.FC = () => {
             ]
           : []),
       ],
-    [user]
+    [isAdmin]
   );
 
   useEffect(() => {
-    if (isAdmin(user)) loadFaces();
-  }, [user]);
+    if (isAdmin) loadFaces();
+  }, [isAdmin]);
 
-  if (!user || !isAdmin(user)) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
         <div className="bg-white p-6 rounded-lg shadow border border-gray-100 text-center max-w-md">
           <Shield className="w-10 h-10 text-red-500 mx-auto mb-3" />
-          <p className="text-gray-700 font-medium mb-1">Acesso restrito.</p>
-          <p className="text-sm text-gray-500">Apenas administradores podem cadastrar ou editar faces.</p>
+          <p className="text-gray-700 font-medium mb-1">Sessão não iniciada.</p>
+          <p className="text-sm text-gray-500">Faça login para cadastrar ou editar faces.</p>
         </div>
       </div>
     );

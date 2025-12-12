@@ -1,8 +1,36 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, getDoc, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
-import { db } from './firebase';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  getDoc,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { db, storage } from './firebase';
 import { FaceDocument } from '../types';
 
 const COLLECTION_NAME = 'faces';
+const EMBEDDING_VERSION = 'v1';
+
+function computeEmbeddingAverage(samples: number[][]): number[] | null {
+  if (!samples.length) return null;
+  const length = samples[0].length;
+  const sum = new Array(length).fill(0);
+
+  samples.forEach((sample) => {
+    sample.forEach((value, idx) => {
+      sum[idx] += value;
+    });
+  });
+
+  return sum.map((value) => value / samples.length);
+}
 
 function normalizeEmbeddings(
   embeddings?: Record<string, number[] | Float32Array> | Array<number[] | Float32Array> | null
@@ -48,11 +76,58 @@ export async function upsertFace(face: FaceDocument): Promise<void> {
     {
       ...face,
       embeddings: normalizedEmbeddings,
+      embeddingAvg: face.embeddingAvg || computeEmbeddingAverage(Object.values(normalizedEmbeddings)),
+      embeddingVersion: face.embeddingVersion || EMBEDDING_VERSION,
+      samples: face.samples || Object.values(normalizedEmbeddings),
       updatedAt: serverTimestamp(),
       createdAt: face.createdAt || serverTimestamp(),
     },
     { merge: true }
   );
+}
+
+export async function saveFaceEnrollment(options: {
+  userId: string;
+  displayName: string;
+  email: string;
+  embeddings: number[][];
+  photoBlobs?: Blob[];
+  active?: boolean;
+  existing?: FaceDocument | null;
+}): Promise<void> {
+  const { userId, displayName, email, embeddings, photoBlobs = [], active = true, existing } = options;
+  const embeddingRecord = normalizeEmbeddings([
+    ...(existing ? Object.values(existing.embeddings || {}) : []),
+    ...embeddings,
+  ]);
+
+  const embeddingAvg = computeEmbeddingAverage(Object.values(embeddingRecord));
+
+  const uploadedUrls: string[] = [];
+  for (const blob of photoBlobs) {
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const storageRef = ref(storage, `faces/${userId}/${key}.jpg`);
+    await uploadBytes(storageRef, blob);
+    const url = await getDownloadURL(storageRef);
+    uploadedUrls.push(url);
+  }
+
+  const mergedImageUrls = [
+    ...(existing?.imageUrls || []),
+    ...uploadedUrls,
+  ];
+
+  await upsertFace({
+    userId,
+    displayName,
+    email,
+    active,
+    embeddings: embeddingRecord,
+    embeddingAvg: embeddingAvg || existing?.embeddingAvg,
+    embeddingVersion: EMBEDDING_VERSION,
+    samples: Object.values(embeddingRecord),
+    imageUrls: mergedImageUrls,
+  });
 }
 
 export async function addEmbedding(userId: string, embedding: number[]): Promise<void> {
