@@ -6,10 +6,10 @@ import {
   loadFaceMatcher,
   createEmbeddingFromBlob,
 } from '../services/faceRecognitionService';
-import { addEmbedding, getFace, upsertFace } from '../services/facesRepository';
+import { addEmbedding, getFace, listActiveFaces, upsertFace } from '../services/facesRepository';
 import { db } from '../services/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { PresenceRecord, GoogleUser } from '../types';
+import { PresenceRecord, GoogleUser, FaceDocument } from '../types';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -21,6 +21,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import { Button } from '../components/Button';
 
 const PresencePage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -28,6 +29,9 @@ const PresencePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<PresenceRecord | null>(null);
   const [loading, setLoading] = useState(false);
+  const [faces, setFaces] = useState<FaceDocument[]>([]);
+  const [matcherStatus, setMatcherStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [lastMatch, setLastMatch] = useState<{ label: string; distance?: number; recognized: boolean } | null>(null);
 
   const ADMIN_EMAILS = ['admin@dominio.com'];
   const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
@@ -48,8 +52,22 @@ const PresencePage: React.FC = () => {
     [user]
   );
 
+  const loadBaseFaces = async () => {
+    setMatcherStatus('loading');
+    try {
+      const [facesList] = await Promise.all([listActiveFaces(), loadFaceMatcher()]);
+      setFaces(facesList);
+      setMatcherStatus('ready');
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setMatcherStatus('error');
+      setError('Não foi possível carregar base de faces.');
+    }
+  };
+
   useEffect(() => {
-    loadFaceMatcher().catch(() => setError('Não foi possível carregar base de faces.'));
+    loadBaseFaces();
   }, []);
 
   const registerPresence = async (record: PresenceRecord) => {
@@ -73,6 +91,7 @@ const PresencePage: React.FC = () => {
       const embedding = await createEmbeddingFromBlob(blob);
       if (!embedding) {
         setStatus('Face não detectada. Ajuste o enquadramento e tente novamente.');
+        setLastMatch(null);
         setLoading(false);
         return;
       }
@@ -93,9 +112,17 @@ const PresencePage: React.FC = () => {
 
       // Recarrega o matcher com a face recém-salva para que o reconhecimento use o novo embedding
       await loadFaceMatcher();
+      const refreshedFaces = await listActiveFaces();
+      setFaces(refreshedFaces);
+      setMatcherStatus('ready');
 
       setStatus('Reconhecendo rosto...');
       const result = await recognizeUserByFace(image);
+      setLastMatch(
+        result.recognized
+          ? { recognized: true, label: result.displayName || result.userId, distance: result.distance }
+          : { recognized: false, label: 'Desconhecido' }
+      );
 
       const recognizedSameUser = result.recognized && result.userId === user?.sub;
       const recognitionNote = !result.recognized
@@ -167,10 +194,59 @@ const PresencePage: React.FC = () => {
           onCancel={() => setStatus('Captura cancelada.')}
           isLoading={loading}
           error={error}
-          onClearError={() => setError(null)}
+        onClearError={() => setError(null)}
         />
 
         {status && <div className="text-sm text-gray-700">{status}</div>}
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Base de rostos</h3>
+              <span
+                className={`text-xs px-2 py-1 rounded-full border ${
+                  matcherStatus === 'ready'
+                    ? 'bg-green-50 text-green-700 border-green-100'
+                    : matcherStatus === 'loading'
+                    ? 'bg-yellow-50 text-yellow-700 border-yellow-100'
+                    : 'bg-red-50 text-red-700 border-red-100'
+                }`}
+              >
+                {matcherStatus === 'loading' ? 'Carregando' : matcherStatus === 'ready' ? 'Pronto' : 'Erro'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600">Cadastros ativos: {faces.length}</p>
+            <div className="space-y-1">
+              {faces.slice(0, 4).map((face) => (
+                <p key={face.userId} className="text-xs text-gray-500">
+                  • {face.displayName} ({(face.samples?.length || Object.keys(face.embeddings || {}).length) || 0} embeddings)
+                </p>
+              ))}
+              {faces.length === 0 && matcherStatus === 'ready' && (
+                <p className="text-xs text-gray-500">Nenhuma face ativa encontrada.</p>
+              )}
+            </div>
+            <Button variant="outline" onClick={loadBaseFaces} className="w-full md:w-auto">
+              Recarregar base
+            </Button>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm space-y-2">
+            <h3 className="font-semibold text-gray-900">Último match</h3>
+            {lastMatch ? (
+              <div className="p-3 rounded-lg border border-gray-100 bg-gray-50">
+                <p className="text-sm font-semibold text-gray-900">
+                  {lastMatch.recognized ? lastMatch.label : 'Desconhecido'}
+                </p>
+                <p className="text-xs text-gray-600">
+                  {lastMatch.recognized ? `Distância: ${lastMatch.distance?.toFixed(3)}` : 'Nenhuma face elegível encontrada.'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Capture uma imagem para visualizar o resultado do matcher.</p>
+            )}
+          </div>
+        </div>
 
         {success && (
           <div className="p-4 bg-green-50 border border-green-100 rounded-md flex items-start gap-2">

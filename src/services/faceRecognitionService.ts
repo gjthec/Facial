@@ -73,21 +73,31 @@ function toLabeledDescriptor(face: FaceDocument) {
   const embeddings = Array.isArray(face.embeddings)
     ? face.embeddings
     : Object.values(face.embeddings || {});
-  const descriptors = embeddings.map((emb) => new Float32Array(emb));
+
+  const samples = face.samples || [];
+  const descriptors = [
+    ...(face.embeddingAvg ? [face.embeddingAvg] : []),
+    ...embeddings,
+    ...samples,
+  ]
+    .filter((emb) => Array.isArray(emb) && emb.length)
+    .map((emb) => new Float32Array(emb));
+
+  if (!descriptors.length) return null;
   return new LabeledFaceDescriptors(face.userId, descriptors);
 }
 
-export async function loadFaceMatcher(threshold = 0.6): Promise<FaceMatcher> {
+export async function loadFaceMatcher(threshold = 0.5): Promise<FaceMatcher> {
   await loadModels();
   const faces = await listActiveFaces();
-  const labeled = faces.map(toLabeledDescriptor);
+  const labeled = faces.map(toLabeledDescriptor).filter(Boolean) as LabeledFaceDescriptors[];
   matcher = new FaceMatcher(labeled, threshold);
   return matcher;
 }
 
 export async function recognizeUserByFace(
   input: HTMLVideoElement | HTMLImageElement | faceapi.TNetInput,
-  threshold = 0.6
+  threshold = 0.5
 ): Promise<
   | { recognized: false }
   | { recognized: true; userId: string; displayName?: string; email?: string; distance: number }
