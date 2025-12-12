@@ -14,8 +14,6 @@ import { Button } from '../components/Button';
 import Sidebar from '../components/Sidebar';
 import { CheckCircle2, LayoutDashboard, Loader2, ScanFace, Shield, Trash2, Upload, Users, UserPlus } from 'lucide-react';
 
-const ADMIN_EMAILS = ['admin@dominio.com'];
-
 const AdminFacesPage: React.FC = () => {
   const { user, logout } = useAuth();
   const [faces, setFaces] = useState<FaceDocument[]>([]);
@@ -23,10 +21,7 @@ const AdminFacesPage: React.FC = () => {
   const [showCapture, setShowCapture] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
-  const isAdmin = useMemo(
-    () => !!user && (ADMIN_EMAILS.includes(user.email) || user.role === 'teacher'),
-    [user]
-  );
+  const isAdmin = useMemo(() => !!user, [user]);
 
   const navItems = useMemo(
     () =>
@@ -132,7 +127,7 @@ const AdminFacesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Faces cadastradas</h1>
-          <p className="text-sm text-gray-500">Apenas administradores podem cadastrar ou remover.</p>
+          <p className="text-sm text-gray-500">Todos os usuários autenticados podem cadastrar ou remover.</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setShowCapture(true)}>Cadastrar face</Button>

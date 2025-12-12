@@ -9,7 +9,7 @@ import {
 import { addEmbedding, getFace, listActiveFaces, upsertFace } from '../services/facesRepository';
 import { db } from '../services/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { PresenceRecord, GoogleUser, FaceDocument } from '../types';
+import { PresenceRecord, FaceDocument } from '../types';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -33,15 +33,14 @@ const PresencePage: React.FC = () => {
   const [matcherStatus, setMatcherStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [lastMatch, setLastMatch] = useState<{ label: string; distance?: number; recognized: boolean } | null>(null);
 
-  const ADMIN_EMAILS = ['admin@dominio.com'];
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  const isAdmin = useMemo(() => !!user, [user]);
 
   const navItems = useMemo(
     () =>
       [
         { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
-        ...(isAdmin(user)
+        ...(isAdmin
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
               { label: 'Cadastro de Imagem', to: '/admin/faces/profile', icon: <ImagePlus className="w-4 h-4" /> },
@@ -49,7 +48,7 @@ const PresencePage: React.FC = () => {
             ]
           : []),
       ],
-    [user]
+    [isAdmin]
   );
 
   const loadBaseFaces = async () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { GoogleUser, FaceDocument } from '../types';
+import { FaceDocument } from '../types';
 import Sidebar from '../components/Sidebar';
 import { CameraCapture } from '../components/CameraCapture';
 import { Button } from '../components/Button';
@@ -8,8 +8,6 @@ import { Input } from '../components/Input';
 import { getFace, listFaces, saveFaceEnrollment } from '../services/facesRepository';
 import { createEmbeddingFromBlob } from '../services/faceRecognitionService';
 import { AlertTriangle, LayoutDashboard, ScanFace, Shield, Upload, Users, UserPlus } from 'lucide-react';
-
-const ADMIN_EMAILS = ['admin@dominio.com'];
 
 const blobToDataUrl = (blob: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -36,14 +34,14 @@ const FaceEnrollmentPage: React.FC = () => {
   const [personId, setPersonId] = useState<string>(user?.sub || '');
   const [personName, setPersonName] = useState<string>(user?.displayName || '');
 
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
+  const isAdmin = useMemo(() => !!user, [user]);
 
   const navItems = useMemo(
     () =>
       [
         { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
         { label: 'Registrar Presença', to: '/presence', icon: <ScanFace className="w-4 h-4" /> },
-        ...(isAdmin(user)
+        ...(isAdmin
           ? [
               { label: 'Faces Autorizadas', to: '/admin/faces', icon: <Users className="w-4 h-4" /> },
               { label: 'Cadastro de Imagem', to: '/admin/faces/profile', icon: <UserPlus className="w-4 h-4" /> },
@@ -51,7 +49,7 @@ const FaceEnrollmentPage: React.FC = () => {
             ]
           : []),
       ],
-    [user]
+    [isAdmin]
   );
 
   const loadFaces = async () => {
@@ -75,13 +73,13 @@ const FaceEnrollmentPage: React.FC = () => {
     setPersonName(user?.displayName || '');
   }, [user]);
 
-  if (!user || !isAdmin(user)) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
         <div className="bg-white p-6 rounded-lg shadow border border-gray-100 text-center max-w-md">
           <Shield className="w-10 h-10 text-red-500 mx-auto mb-3" />
-          <p className="text-gray-700 font-medium mb-1">Acesso restrito.</p>
-          <p className="text-sm text-gray-500">Apenas administradores podem cadastrar novas faces.</p>
+          <p className="text-gray-700 font-medium mb-1">Sessão não iniciada.</p>
+          <p className="text-sm text-gray-500">Faça login para cadastrar novas faces.</p>
         </div>
       </div>
     );

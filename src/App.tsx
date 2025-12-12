@@ -9,9 +9,6 @@ import PresencePage from './pages/PresencePage';
 import FaceEnrollmentPage from './pages/FaceEnrollmentPage';
 import FaceProfilePage from './pages/FaceProfilePage';
 import { Loader2 } from 'lucide-react';
-import { GoogleUser } from './types';
-
-const ADMIN_EMAILS = ['admin@dominio.com'];
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,9 +29,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 };
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const isAdmin = (u?: GoogleUser | null) => !!u && (ADMIN_EMAILS.includes(u.email) || u.role === 'teacher');
-  if (!isAdmin(user)) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
